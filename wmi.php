@@ -129,9 +129,16 @@ if ($execstatus != 0) {
 }
 
 if ($dbug == 1) { // basic debug, show output in easy to read format and display the exact execution command
-	echo "\n".$wmiexec."\nExec Status: ".$execstatus."\n";
+	echo "\n Hostname Raw: \e[0;31m".$args['h']."\e[0m Formatted: \e[0;32m".$host."\e[0m";
+	echo "\n Credential Raw: \e[0;31m".$args['u']."\e[0m Formatted: \e[0;32m".$credential."\e[0m";
+	echo "\n WMI Class Raw: \e[0;31m".$args['w']."\e[0m Formatted: \e[0;32m".$wmiclass."\e[0m";
+	echo "\n Columns Raw: \e[0;31m".$args['c']."\e[0m Formatted: \e[0;32m".$columns."\e[0m";
+	echo "\n NameSpace Raw: \e[0;31m".$args['n']."\e[0m Formatted: \e[0;32m".$namespace."\e[0m";
+	echo "\n Condition Key Raw: \e[0;31m".$args['k']."\e[0m Formatted: \e[0;32m".$condition_key."\e[0m";
+	echo "\n Condition Value Raw: \e[0;31m".$args['v']."\e[0m Formatted: \e[0;32m".$condition_val."\e[0m";
+	echo "\n\n".$wmiexec."\nExec Status: ".$execstatus."\n\n";
 	$sep = "\n";
-}
+};
 if ($dbug == 2) { // advanced debug, logs everything to file for full debug
 	$dbug_log = $log_location.'dbug_'.$host.'.log';
 	$fp = fopen($dbug_log,'a+');
