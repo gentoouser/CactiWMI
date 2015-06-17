@@ -2,7 +2,7 @@
 <?php
 /**
  * CactiWMI
- * Version 0.0.7-SVN
+ * Version 0.0.8-SVN
  *
  * Copyright (c) 2008-2010 Ross Fawcett
  *
@@ -71,17 +71,17 @@ if ($opt_count > 0) { // test to see if using new style arguments and if so defa
 	if (empty($args['h'])) {
 		display_help();
 	} else {
-		$host = $args['h']; // hostname in form xxx.xxx.xxx.xxx
+		$host = str_replace(array("\'","'"),"",$args['h']); // hostname in form xxx.xxx.xxx.xxx with ' or \' filtered out
 	}
 	if (empty($args['u'])) {
 		display_help();
 	} else {
-		$credential = $args['u']; // credential from wmi-logins to use for the query
+		$credential = str_replace(array("\'","'"),"",$args['u']); // credential from wmi-logins to use for the query with ' or \' filtered out
 	}
 	if (empty($args['w'])) {
 		display_help();
 	} else {
-		$wmiclass = $args['w']; // what wmic class to query in form Win32_ClassName
+		$wmiclass = str_replace(array("\'","'"),"",$args['w']); // what wmic class to query in form Win32_ClassName with ' or \' filtered out
 	}
 	// enables debug mode when the argument is passed (and is valid)
 	if (isset($args['d']) && in_array($args['d'],$dbug_levels)) {
@@ -89,16 +89,16 @@ if ($opt_count > 0) { // test to see if using new style arguments and if so defa
 	}
 	// what columns to retrieve.
 	if (!empty($args['c'])) {
-		$columns = $args['c'];
+		$columns = str_replace(array("\'","'"),"",$args['c']); // Remove ' or \'
 	}
 
-	if (isset($args['n']) && $args['n'] != '') { // test to check if namespace was passed
-		$namespace = escapeshellarg($args['n']);
+	if (isset($args['n']) && str_replace(array("\'","'"),"",$args['n']) != '') { // test to check if namespace was passed
+		$namespace = "'".str_replace("'","",escapeshellarg(str_replace(array("\'","'"),"",$args['n'])))."'"; // Make sure ' is round the name space and extra \' or ' are removed'
 	}
 
-	if (isset($args['k'])&& $args['k'] != '') { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
-		$condition_key = $args['k']; // the condition key we are filtering on
-		$condition_val = str_replace('\\','',escapeshellarg($args['v'])); // the value we are filtering with, and also strip out any slashes (backwards compatibility)
+	if (isset($args['k'])&& str_replace(array("\'","'"),"",$args['k']) != '') { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
+		$condition_key = str_replace("'","",str_replace('\\','',escapeshellarg(str_replace("'","",str_replace("+"," ",$args['k'])))));  // the condition key we are filtering on, and ' or \' filtered out. + are replaced with spaces.
+		$condition_val = "'".str_replace(array("\\","'"),"",escapeshellarg(str_replace("'","",str_replace("+"," ",$args['v']))))."'"; // the value we are filtering with, and also strip out any slashes (backwards compatibility), and ' or \' filtered out. + are replaced with spaces and whole varible is incased in '.
 	}
 } elseif ($opt_count == 0 && $arg_count > 1) { // if using old style arguments, process them accordingly
 	$host = $argv[1]; // hostname in form xxx.xxx.xxx.xxx
