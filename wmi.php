@@ -172,7 +172,14 @@ if ($wmi_count > 0) {
 		$j=0;
 		foreach($data as $item) {
 			if ( $wmi_count > 3 ) { $inc = $i-2; } // if there are multiple rows returned add an incremental number to the returned keyname
-			$output .= $names[$j++] . $inc . ':' . str_replace(array(':',' '), array('','_'), $item) . $sep;
+				if ($dbug == 1) {
+					//$output = $output.$names[$j++].$inc.':'.str_replace(array(':',' '),array('~','+'),$item).$sep."\n";
+					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep."\n"; // Cleaner output for debuging mode 1
+				} else {
+					//$output = $output.$names[$j++].$inc.':'.str_replace(array(':',' '),array('~','+'),$item).$sep;
+					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep; //replaces spaces with +
+				}
+			}
 		}
 	}
 }
