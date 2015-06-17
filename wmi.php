@@ -2,15 +2,23 @@
 <?php
 /**
  * CactiWMI
- * Version 0.0.8-SVN
- *
+ * Version 0.0.8-git
+ * 
+ * Updated by Paul Fuller
+ * Date 2015-06-15
+ *  Added  better debugging output
+ *  Changed it so filter values can use + for spaces and ~ for :.
+ *  Added extra variable scrubbing to remove spaces and single quotes.
+ * Date 2015-06-17
+ *  Merged fixes from https://github.com/jhg03a/CactiWMI/blob/master/wmi.php (jhg03a)
+ * 
  * Copyright (c) 2008-2010 Ross Fawcett
  *
  * This file is the main application which interfaces the wmic binary with the
  * input and output from Cacti. The idea of this is to move the configuration
  * into Cacti rather than creating a new script for each item that you wish to
  * monitor via WMI.
- *
+ * 
  * The only configurable options are listed under general configuration and are
  * the debug level, log location and wmic location. Other than that all other
  * configuration is done via the templates.
@@ -18,7 +26,7 @@
 
 // general configuration
 $wmiexe = trim(`which wmic`); // executable for the wmic command
-if (empty($wmiexe)) {
+if (empty($wmiexe)) { 
 	print "You must install the wmi client to use this script.\n\n";
 	exit;
 }
@@ -31,15 +39,16 @@ $output = null; // by default the output is null
 $inc = null; // by default needs to be null
 $sep = " "; // character to use between results
 $dbug_levels = array(0,1,2); // valid debug levels
-$version = '0.0.7-git'; // version
-$namespace = escapeshellarg('root\CIMV2'); // default namespace
+$version = '0.0.8-git'; // version
+$namespace = escapeshellarg('root\CIMV2'); // default name-space
 $columns = '*'; // default to select all columns
-
+$trimchr = '\'"\\'; // default characters to remove
 // grab arguments
 $args = getopt("h:u:w:c:k:v:n:d:");
 
 $opt_count = count($args); // count number of options, saves having to recount later
 $arg_count = count($argv); // count number of arguments, again saving recounts further on
+
 
 function display_help() {
 	echo "wmi.php version $GLOBALS[version]\n",
@@ -68,38 +77,32 @@ function display_help() {
 }
 
 if ($opt_count > 0) { // test to see if using new style arguments and if so default to use them
-	if (empty($args['h'])) {
-		display_help();
-	} else {
-		$host = str_replace(array("\'","'"),"",$args['h']); // hostname in form xxx.xxx.xxx.xxx with ' or \' filtered out
-	}
-	if (empty($args['u'])) {
-		display_help();
-	} else {
-		$credential = str_replace(array("\'","'"),"",$args['u']); // credential from wmi-logins to use for the query with ' or \' filtered out
-	}
-	if (empty($args['w'])) {
-		display_help();
-	} else {
-		$wmiclass = str_replace(array("\'","'"),"",$args['w']); // what wmic class to query in form Win32_ClassName with ' or \' filtered out
-	}
-	// enables debug mode when the argument is passed (and is valid)
-	if (isset($args['d']) && in_array($args['d'],$dbug_levels)) {
-		$dbug = $args['d'];
-	}
-	// what columns to retrieve.
-	if (!empty($args['c'])) {
-		$columns = str_replace(array("\'","'"),"",$args['c']); // Remove ' or \'
-	}
+	$host =  trim($args['h'],$trimchr); // hostname in form xxx.xxx.xxx.xxx
+	if (empty($host)) { display_help();} // Test for required data in variable 
+	$credential =  trim($args['u'],$trimchr); // credential from wmi-logins to use for the query
+	if (empty($credential)) { display_help();} // Test for required data in variable 
+	$wmiclass =  trim($args['w'],$trimchr); // what wmic class to query in form Win32_ClassName
+	if (empty($wmiclass)) { display_help();} // Test for required data in variable 
 
-	if (isset($args['n']) && str_replace(array("\'","'"),"",$args['n']) != '') { // test to check if namespace was passed
-		$namespace = "'".str_replace("'","",escapeshellarg(str_replace(array("\'","'"),"",$args['n'])))."'"; // Make sure ' is round the name space and extra \' or ' are removed'
+	if (isset($args['d'])) {
+		if (in_array($args['d'],$dbug_levels)) { // enables debug mode when the argument is passed (and is valid)
+			$dbug = $args['d'];
+		};
+	};
+	if (!empty(trim($args['c'],$trimchr))) {
+		$columns = trim($args['c'],$trimchr); // default characters filtered out
 	}
+	
+	if (isset($args['n']) && (!empty(trim($args['n'],$trimchr))))  { // test to check if name-space was passed
+		$namespace = "'".trim(escapeshellarg(trim($args['n'],$trimchr)),"'")."'";
+	};
 
-	if (isset($args['k'])&& str_replace(array("\'","'"),"",$args['k']) != '') { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
-		$condition_key = str_replace("'","",str_replace('\\','',escapeshellarg(str_replace("'","",str_replace("+"," ",$args['k'])))));  // the condition key we are filtering on, and ' or \' filtered out. + are replaced with spaces.
-		$condition_val = "'".str_replace(array("\\","'"),"",escapeshellarg(str_replace("'","",str_replace("+"," ",$args['v']))))."'"; // the value we are filtering with, and also strip out any slashes (backwards compatibility), and ' or \' filtered out. + are replaced with spaces and whole varible is incased in '.
-	}
+	if (isset($args['k'])&& (!empty(trim($args['k'],$trimchr)))) { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
+		$condition_key = trim(escapeshellarg(str_replace("+"," ",$args['k'])),$trimchr); // the condition key we are filtering on
+		$condition_val = "'".trim(escapeshellarg(str_replace("+"," ",$args['v'])),$trimchr)."'"; // the value we are filtering with, and also strip out any slashes (backwards compatibility)
+	};
+} elseif ($opt_count == 0 && $arg_count == 1) { // display help if old style arguments are not present and no new style arguments passed
+	display_help();
 } elseif ($opt_count == 0 && $arg_count > 1) { // if using old style arguments, process them accordingly
 	$host = $argv[1]; // hostname in form xxx.xxx.xxx.xxx
 	$credential = $argv[2]; // credential from wmi-logins to use for the query
@@ -109,13 +112,13 @@ if ($opt_count > 0) { // test to see if using new style arguments and if so defa
 		$condition_key = $argv[5];
 		$condition_val = escapeshellarg($argv[6]);
 	}
-} else {
+}else {
 	display_help();
 }
 
 $wmiquery = 'SELECT '.$columns.' FROM '.$wmiclass; // basic query built
-if (isset($condition_key)) {
-    $wmiquery = $wmiquery.' WHERE '.$condition_key.'='.$condition_val; // if the query has a filter argument add it in
+if (isset($condition_key) && $condition_val != "''") {
+        $wmiquery = $wmiquery.' WHERE '.$condition_key.'='.$condition_val; // if the query has a filter argument add it in
 }
 $wmiquery = '"'.$wmiquery.'"'; // encapsulate the query in " "
 
@@ -124,8 +127,8 @@ $wmiexec = $wmiexe.' --namespace='.$namespace.' --authentication-file='.$credent
 exec($wmiexec,$wmiout,$execstatus); // execute the query and store output in $wmiout and return code in $execstatus
 
 if ($execstatus != 0) {
-	$dbug = max($dbug, 1);
-	echo "\nReturn code non-zero, debug mode enabled!\n";
+	$dbug = 1;
+	echo "\n\nReturn code non-zero, debug mode enabled!\n\n";
 }
 
 if ($dbug == 1) { // basic debug, show output in easy to read format and display the exact execution command
@@ -137,12 +140,12 @@ if ($dbug == 1) { // basic debug, show output in easy to read format and display
 	echo "\n Condition Key Raw: \e[0;31m".$args['k']."\e[0m Formatted: \e[0;32m".$condition_key."\e[0m";
 	echo "\n Condition Value Raw: \e[0;31m".$args['v']."\e[0m Formatted: \e[0;32m".$condition_val."\e[0m";
 	echo "\n\n".$wmiexec."\nExec Status: ".$execstatus."\n\n";
-	$sep = "\n";
-};
+
+}
 if ($dbug == 2) { // advanced debug, logs everything to file for full debug
 	$dbug_log = $log_location.'dbug_'.$host.'.log';
 	$fp = fopen($dbug_log,'a+');
-	if ($fp) {
+	if ($fp) { //Test that log file is open.
 		$dbug_time = date('l jS \of F Y h:i:s A');
 		fwrite($fp,"Time: $dbug_time\nWMI Class: $wmiclass\nCredential: $credential\nColumns: $columns\nCondition Key: $condition_key\nCondition Val: $condition_val\nQuery: $wmiquery\nExec: $wmiexec\nOutput:\n".$wmiout[0]."\n".$wmiout[1]."\n");
 	} else {
@@ -157,36 +160,61 @@ if ($execstatus) {
 	echo "WMI Client Output: " . implode("\n", $wmiout) . "\n";
 	exit($execstatus);
 }
+// Chomp any errors that wmic might have thrown, but still worked
+$classindex = -1;
+for($i=0;$i<count($wmiout);$i++)
+{
+	if(0 === strpos($wmiout[$i], 'CLASS: '))
+	{
+		$classindex = $i;
+		break;
+	}
+}
+// Abort is the wmi output isn't normally structured
+if($classindex == -1)
+{
+	echo "WMI Class Chomp Failed!\nWMI Client Output: ".implode("\n", $wmiout)."\n";
+	exit(1);
+}
+for($i=0;$i<$classindex;$i++)
+{
+	unset($wmiout[$i]);
+}
+// reindex the array output
+$wmiout = array_values($wmiout);
 
-$wmi_count = count($wmiout); // count the number of lines returned from wmic, saves recouting later
+$wmi_count = count($wmiout); // count the number of lines returned from wmic, saves recounting later
 
 if ($wmi_count > 0) {
 
-	$names = explode('|',$wmiout[1]); // build the names list to dymanically output it
+	$names = explode('|',$wmiout[1]); // build the names list to dynamically output it
 
 	for($i=2;$i<$wmi_count;$i++) { // dynamically output the key:value pairs to suit cacti
 		$data = explode('|',$wmiout[$i]);
 		if ($dbug == 2) {
 			fwrite($fp,$wmiout[$i]."\n");
-		}
+		};
 		$j=0;
 		foreach($data as $item) {
-			if ( $wmi_count > 3 ) { $inc = $i-2; } // if there are multiple rows returned add an incremental number to the returned keyname
+			if ( $wmi_count > 3 ) { $inc = $i-2; }; // if there are multiple rows returned add an incremental number to the returned key name
 				if ($dbug == 1) {
-					//$output = $output.$names[$j++].$inc.':'.str_replace(array(':',' '),array('~','+'),$item).$sep."\n";
-					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep."\n"; // Cleaner output for debuging mode 1
+					//better format output for troubleshooting
+					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item)."\n";
 				} else {
-					//$output = $output.$names[$j++].$inc.':'.str_replace(array(':',' '),array('~','+'),$item).$sep;
-					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep; //replaces spaces with +
-				}
-			}
-		}
+					$output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep;
+				};
+			};
 	}
+
 }
 
 if ($dbug == 2) {
 	fwrite($fp,"Output to Cacti: $output\n\n\n");
 	fclose($fp);
 }
-
-echo substr($output,0,-1); // strip of the trailing space just in case cacti doesn't like it
+if ($dbug != 1 ) {
+	echo substr($output,0,-1); // strip of the trailing space just in case cacti doesn't like it
+} else {
+	echo $output; // cleans up output when debugging in console
+}
+?>
