@@ -70,7 +70,9 @@ domain=<your domain>
 
 ## Further Information
 
-Github URL https://github.com/neclimdul/CactiWMI
+Github URL https://github.com/neclimdul/CactiWMI Offical Repo
+
+Current Repo: https://github.com/gentoouser/CactiWMI
 
 Forum thread
 http://forums.cacti.net/viewtopic.php?p=159410
