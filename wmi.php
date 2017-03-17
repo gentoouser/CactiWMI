@@ -97,7 +97,16 @@ if ($opt_count > 0) { // test to see if using new style arguments and if so defa
         }
 
         if (isset($args['n']) && (!empty(trim($args['n'],$trimchr))))  { // test to check if name-space was passed
-                $namespace = "'".str_replace("\\\\","\\",trim(escapeshellarg(trim($args['n'],$trimchr)),"'"))."'";
+                 $temparray = explode("\\",trim(escapeshellarg($args['n'],$trimchr))); // Remove any extra backslashes
+                foreach ($temparray as &$tempvalue) {
+                        if (!empty($tempvalue)) {
+                                $namespace = $namespace.$tempvalue."\\";
+                        };
+                };
+                if (substr($namespace, -1) == "\\") {
+                        $namespace = substr($namespace, 0, -1);
+                };
+
         };
 
         if (isset($args['k']) && (isset($args['v'])  && (!empty(trim($args['k'],$trimchr)))) && (!empty(trim($args['v'],$trimchr)))) { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
