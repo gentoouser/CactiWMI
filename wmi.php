@@ -2,10 +2,10 @@
 <?php
 /**
  * CactiWMI
- * Version 0.0.8-git
+ * Version 0.0.9-git
  *
  * Updated by Paul Fuller
- * Date 2017-03-17
+ * Date 2017-04-05
  *  Added  better debugging output
  *  Changed it so filter values can use + for spaces and ~ for :.
  *  Added extra variable scrubbing to remove spaces and single quotes.
@@ -96,19 +96,11 @@ if ($opt_count > 0) { // test to see if using new style arguments and if so defa
                 $columns = trim($args['c'],$trimchr); // default characters filtered out
         }
 
-        if (isset($args['n']) && (!empty(trim($args['n'],$trimchr))))  { // test to check if name-space was passed
-                 $temparray = explode("\\",trim(escapeshellarg($args['n'],$trimchr))); // Remove any extra backslashes
-                foreach ($temparray as &$tempvalue) {
-                        if (!empty($tempvalue)) {
-                                $namespace = $namespace.$tempvalue."\\";
-                        };
-                };
-                if (substr($namespace, -1) == "\\") {
-                        $namespace = substr($namespace, 0, -1);
-                };
-
+         if (isset($args['n']) && (!empty(trim($args['n'],$trimchr))))  { // test to check if name-space was passed
+                $temparray = explode("\\",$args['n']);
+                $namespace = $temparray[0] . "\\\\" . end($temparray);
         };
-
+        
         if (isset($args['k']) && (isset($args['v'])  && (!empty(trim($args['k'],$trimchr)))) && (!empty(trim($args['v'],$trimchr)))) { // check to see if a filter is being used, also check to see if it is "none" as required to work around cacti...
                 $condition_key = trim(escapeshellarg(str_replace("+"," ",$args['k'])),$trimchr); // the condition key we are filtering on, and also strip out any slashes (backwards compatibility) and spaces
                 $condition_val = "'".trim(escapeshellarg(str_replace("+"," ",$args['v'])),$trimchr)."'"; // the value we are filtering with, and also strip out any slashes (backwards compatibility) and spaces
