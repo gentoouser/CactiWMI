@@ -2,10 +2,10 @@
 <?php
 /**
  * CactiWMI
- * Version 0.0.9-git
+ * Version 0.0.10-git
  *
  * Updated by Paul Fuller
- * Date 2017-04-05
+ * Date 2017-04-06
  *  Added  better debugging output
  *  Changed it so filter values can use + for spaces and ~ for :.
  *  Added extra variable scrubbing to remove spaces and single quotes.
@@ -43,7 +43,7 @@ $dbug_levels = array(0,1,2); // valid debug levels
 $version = '0.0.8-git'; // version
 $namespace = escapeshellarg('root\CIMV2'); // default name-space
 $columns = '*'; // default to select all columns
-$trimchr = '\'"\\'; // default characters to remove
+$trimchr = '\'"'; // default characters to remove
 $condition_key = null;
 $condition_val = null;
 // grab arguments
@@ -201,11 +201,12 @@ if ($wmi_count > 0) {
                 $j=0;
                 foreach($data as $item) {
                         if ( $wmi_count > 3 ) { $inc = $i-2; }; // if there are multiple rows returned add an incremental number to the returned key name
-                                if ($dbug == 1) {
+                               //Remove any colons and spaces what are in the output so cacti does not throw an error. 
+                               if ($dbug == 1) {
                                         //better format output for troubleshooting
-                                        $output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item)."\n";
+                                        $output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),str_replace(array(':'),array(''),$item))."\n";
                                 } else {
-                                        $output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),$item).$sep;
+                                        $output = $output.$names[$j++].$inc.':'.str_replace(array(' '),array('+'),str_replace(array(':'),array(''),$item)).$sep;
                                 };
                         };
         }
